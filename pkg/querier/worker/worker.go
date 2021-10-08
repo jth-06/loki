@@ -105,6 +105,9 @@ func NewQuerierWorker(cfg Config, rng ring.ReadRing, handler RequestHandler, log
 	var address string
 
 	switch {
+	case rng != nil:
+		level.Info(logger).Log("msg", "Starting querier worker using query-scheduler and scheduler ring for addresses")
+		processor, servs = newSchedulerProcessor(cfg, handler, logger, reg)
 	case cfg.SchedulerAddress != "":
 		level.Info(logger).Log("msg", "Starting querier worker connected to query-scheduler", "scheduler", cfg.SchedulerAddress)
 
@@ -116,10 +119,6 @@ func NewQuerierWorker(cfg Config, rng ring.ReadRing, handler RequestHandler, log
 
 		address = cfg.FrontendAddress
 		processor = newFrontendProcessor(cfg, handler, logger)
-
-	case rng != nil:
-		level.Info(logger).Log("msg", "Starting querier worker using query-scheduler and scheduler ring for addresses")
-		processor, servs = newSchedulerProcessor(cfg, handler, logger, reg)
 	default:
 		return nil, errors.New("unable to start the querier worker, need to configure one of frontend_address, scheduler_address, or a ring config in the query_scheduler config block")
 	}

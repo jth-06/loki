@@ -1,6 +1,7 @@
 package querier
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cortexproject/cortex/pkg/ring"
@@ -84,6 +85,16 @@ func InitWorkerService(
 			httpgrpc_server.NewServer(externalHandler),
 			util_log.Logger,
 			prometheus.DefaultRegisterer)
+	}
+
+	// Since we must be running a querier with either a frontend and/or scheduler at this point, if no frontend or scheduler address
+	// is configured, Loki will default to using the frontend on localhost on it's own GRPC listening port.
+	if (*cfg.QuerierWorkerConfig).FrontendAddress == "" && (*cfg.QuerierWorkerConfig).SchedulerAddress == "" {
+		address := fmt.Sprintf("127.0.0.1:%d", cfg.GrpcListenPort)
+		level.Warn(util_log.Logger).Log(
+			"msg", "Worker address is empty, attempting automatic worker configuration.  If queries are unresponsive consider configuring the worker explicitly.",
+			"address", address)
+		cfg.QuerierWorkerConfig.FrontendAddress = address
 	}
 
 	// Add a middleware to extract the trace context and add a header.
